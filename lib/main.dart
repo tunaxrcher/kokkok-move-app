@@ -41,7 +41,7 @@ class KokKokMoveApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('th')],
-      locale: const Locale('en'), // Default locale
+      locale: const Locale('th'), // Default locale
     );
   }
 }

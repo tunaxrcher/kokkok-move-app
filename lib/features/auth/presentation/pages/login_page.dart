@@ -30,10 +30,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (user != null && mounted) {
         context.go(AppRoutes.home);
       } else {
-        _showErrorSnackBar('Failed to sign in. Please try again.');
+        _showErrorSnackBar('เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
       }
     } catch (e) {
-      _showErrorSnackBar('An error occurred. Please try again.');
+      _showErrorSnackBar('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
       if (mounted) {
         setState(() {
@@ -95,7 +95,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                       ),
                 label: Text(
-                  _isLoading ? 'Signing in...' : 'Sign in with Google',
+                  _isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบด้วย Google',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

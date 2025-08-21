@@ -23,27 +23,27 @@ class _MainPageState extends State<MainPage> {
     const BottomNavigationBarItem(
       icon: Icon(Icons.person_outline),
       activeIcon: Icon(Icons.person),
-      label: 'Profile',
+      label: 'โปรไฟล์',
     ),
     const BottomNavigationBarItem(
       icon: Icon(Icons.history_outlined),
       activeIcon: Icon(Icons.history),
-      label: 'History',
+      label: 'ประวัติ',
     ),
     const BottomNavigationBarItem(
       icon: Icon(Icons.home_outlined),
       activeIcon: Icon(Icons.home),
-      label: 'Home',
+      label: 'หน้าแรก',
     ),
     const BottomNavigationBarItem(
       icon: Icon(Icons.support_agent_outlined),
       activeIcon: Icon(Icons.support_agent),
-      label: 'Contact',
+      label: 'ติดต่อ',
     ),
     const BottomNavigationBarItem(
       icon: Icon(Icons.settings_outlined),
       activeIcon: Icon(Icons.settings),
-      label: 'Settings',
+      label: 'ตั้งค่า',
     ),
   ];
 
@@ -75,15 +75,15 @@ class _MainPageState extends State<MainPage> {
   String _getPageTitle(int index) {
     switch (index) {
       case 0:
-        return 'My Pages';
+        return 'หน้าของฉัน';
       case 1:
-        return 'History';
+        return 'ประวัติการเดินทาง';
       case 2:
-        return 'Home';
+        return 'หน้าแรก';
       case 3:
-        return 'Contact';
+        return 'ติดต่อเรา';
       case 4:
-        return 'Settings';
+        return 'ตั้งค่า';
       default:
         return 'KOKKOK Move';
     }

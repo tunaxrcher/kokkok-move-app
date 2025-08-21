@@ -54,6 +54,6 @@ class AppConstants {
   static const String keyLocationPermission = 'location_permission';
 
   // Default Values
-  static const String defaultLanguage = 'en';
+  static const String defaultLanguage = 'th';
   static const String fallbackLanguage = 'en';
 }

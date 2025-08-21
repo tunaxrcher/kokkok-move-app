@@ -169,7 +169,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to book ride. Please try again.'),
+            content: Text('ไม่สามารถเรียกรถได้ กรุณาลองใหม่อีกครั้ง'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -311,7 +311,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                         padding: const EdgeInsets.all(AppConstants.spacing16),
                         children: [
                           Text(
-                            'Where do you want to go?',
+                            'คุณต้องการไปที่ไหน?',
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
@@ -320,11 +320,11 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                           // Pickup location
                           _buildLocationCard(
                             icon: Icons.my_location,
-                            title: 'Pickup location',
+                            title: 'จุดรับ',
                             subtitle:
                                 _pickupLocation?.address ??
                                 _pickupLocation?.name ??
-                                'Select pickup location',
+                                'เลือกจุดรับ',
                             onTap: () =>
                                 _showLocationSearch(isDestination: false),
                             iconColor: AppColors.success,
@@ -335,11 +335,11 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                           // Destination location
                           _buildLocationCard(
                             icon: Icons.location_on,
-                            title: 'Destination',
+                            title: 'จุดหมาย',
                             subtitle:
                                 _destinationLocation?.address ??
                                 _destinationLocation?.name ??
-                                'Where to?',
+                                'ไปที่ไหน?',
                             onTap: () =>
                                 _showLocationSearch(isDestination: true),
                             iconColor: AppColors.error,
@@ -369,7 +369,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                                     ),
                                   )
                                 : const Text(
-                                    'Book Ride',
+                                    'เรียกรถ',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
