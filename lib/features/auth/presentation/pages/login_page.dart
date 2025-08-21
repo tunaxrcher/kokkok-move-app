@@ -85,7 +85,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           color: AppColors.onPrimary,
                         ),
                       )
-                    : const Icon(Icons.login),
+                    : SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: Image.asset(
+                          'assets/images/google_logo.png',
+                          width: 20,
+                          height: 20,
+                        ),
+                      ),
                 label: Text(
                   _isLoading ? 'Signing in...' : 'Sign in with Google',
                   style: const TextStyle(
@@ -97,17 +105,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   padding: const EdgeInsets.symmetric(
                     vertical: AppConstants.spacing16,
                   ),
-                ),
-              ),
-
-              const SizedBox(height: AppConstants.spacing16),
-
-              // Test Map Button (for debugging)
-              OutlinedButton(
-                onPressed: () => context.push('/test-map'),
-                child: const Text(
-                  'Test Google Maps',
-                  style: TextStyle(color: AppColors.primary),
                 ),
               ),
 
