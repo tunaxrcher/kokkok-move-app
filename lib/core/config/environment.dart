@@ -2,9 +2,11 @@ class Environment {
   Environment._();
 
   // Google Maps API Keys (replace with your actual keys)
-  static const String googleMapsApiKeyAndroid = 'YOUR_ANDROID_API_KEY_HERE';
+  static const String googleMapsApiKeyAndroid =
+      'AIzaSyCFjY6kj6zDXoGwWHRMx59guBUK0p0mfPo';
   static const String googleMapsApiKeyIOS = 'YOUR_IOS_API_KEY_HERE';
-  static const String googleMapsApiKeyWeb = 'YOUR_WEB_API_KEY_HERE';
+  static const String googleMapsApiKeyWeb =
+      'AIzaSyCObmu7PQ8LOE-6i0Y33MUyp3xaDQLDPT8';
 
   // Google Sign-In Client IDs
   static const String googleSignInWebClientId =

@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../shared/models/location.dart' as app_models;
 import '../../../../shared/services/location_service.dart';
+import '../../../../shared/services/google_places_service.dart';
 import '../../../../core/di/injection_container.dart';
 
 class LocationSearchSheet extends StatefulWidget {
   final bool isDestination;
   final Function(app_models.Location) onLocationSelected;
+  final app_models.Location? currentLocation;
 
   const LocationSearchSheet({
     super.key,
     required this.isDestination,
     required this.onLocationSelected,
+    this.currentLocation,
   });
 
   @override
@@ -23,8 +28,12 @@ class LocationSearchSheet extends StatefulWidget {
 class _LocationSearchSheetState extends State<LocationSearchSheet> {
   final TextEditingController _searchController = TextEditingController();
   final LocationService _locationService = sl<LocationService>();
-  List<app_models.Location> _searchResults = [];
+  List<PlacePrediction> _predictions = [];
+  List<app_models.Location> _nearbyPlaces = [];
   bool _isSearching = false;
+  bool _isLoadingNearby = false;
+  Timer? _debounceTimer;
+  final String _sessionToken = const Uuid().v4();
 
   final List<app_models.Location> _popularLocations = [
     const app_models.Location(
@@ -62,13 +71,48 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
   @override
   void initState() {
     super.initState();
-    _searchResults = _popularLocations;
+    _loadNearbyPlaces();
   }
 
-  Future<void> _searchLocations(String query) async {
+  Future<void> _loadNearbyPlaces() async {
+    if (widget.currentLocation == null || !widget.isDestination) return;
+
+    setState(() {
+      _isLoadingNearby = true;
+    });
+
+    try {
+      final nearbyPlaces = await _locationService.getNearbyPlaces(
+        widget.currentLocation!,
+        radius: 10000, // 10km radius
+        type: 'establishment',
+      );
+
+      setState(() {
+        _nearbyPlaces = nearbyPlaces;
+        _isLoadingNearby = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingNearby = false;
+      });
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+
+    // Start new timer
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _searchPlaces(query);
+    });
+  }
+
+  Future<void> _searchPlaces(String query) async {
     if (query.isEmpty) {
       setState(() {
-        _searchResults = _popularLocations;
+        _predictions = [];
         _isSearching = false;
       });
       return;
@@ -79,23 +123,44 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
     });
 
     try {
-      final results = await _locationService.searchLocations(query);
+      final predictions = await _locationService.getPlacePredictions(
+        query,
+        currentLocation: widget.currentLocation,
+        sessionToken: _sessionToken,
+      );
+
       setState(() {
-        _searchResults = results;
+        _predictions = predictions;
         _isSearching = false;
       });
     } catch (e) {
+      print('Search places error: $e');
       setState(() {
-        _searchResults = _popularLocations
-            .where(
-              (location) =>
-                  location.name!.toLowerCase().contains(query.toLowerCase()) ||
-                  (location.address?.toLowerCase().contains(
-                        query.toLowerCase(),
-                      ) ??
-                      false),
-            )
-            .toList();
+        _predictions = [];
+        _isSearching = false;
+      });
+    }
+  }
+
+  Future<void> _selectPlace(PlacePrediction prediction) async {
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      final location = await _locationService.getPlaceDetails(
+        prediction.placeId,
+      );
+      if (location != null) {
+        widget.onLocationSelected(location);
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      print('Select place error: $e');
+    } finally {
+      setState(() {
         _isSearching = false;
       });
     }
@@ -163,13 +228,13 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
                     ? IconButton(
                         onPressed: () {
                           _searchController.clear();
-                          _searchLocations('');
+                          _onSearchChanged('');
                         },
                         icon: const Icon(Icons.clear),
                       )
                     : null,
               ),
-              onChanged: _searchLocations,
+              onChanged: _onSearchChanged,
             ),
           ),
 
@@ -177,51 +242,222 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
           Expanded(
             child: _isSearching
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacing16,
+                : _searchController.text.isNotEmpty
+                ? _buildPredictionsList()
+                : _buildDefaultContent(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPredictionsList() {
+    if (_predictions.isEmpty) {
+      return const Center(child: Text('ไม่พบสถานที่ที่ค้นหา'));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing16),
+      itemCount: _predictions.length,
+      itemBuilder: (context, index) {
+        final prediction = _predictions[index];
+        return Card(
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+              ),
+              child: Icon(Icons.place, color: AppColors.primary, size: 20),
+            ),
+            title: Text(
+              prediction.mainText ?? prediction.description,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+            ),
+            subtitle: prediction.secondaryText != null
+                ? Text(
+                    prediction.secondaryText!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  )
+                : null,
+            onTap: () => _selectPlace(prediction),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDefaultContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Current location option (for pickup only)
+          if (!widget.isDestination && widget.currentLocation != null) ...[
+            Text(
+              'ตำแหน่งปัจจุบัน',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: AppConstants.spacing8),
+            Card(
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusMedium,
                     ),
-                    itemCount: _searchResults.length,
-                    itemBuilder: (context, index) {
-                      final location = _searchResults[index];
-                      return Card(
-                        child: ListTile(
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(
-                                AppConstants.radiusMedium,
-                              ),
-                            ),
-                            child: Icon(
-                              widget.isDestination
-                                  ? Icons.location_on
-                                  : Icons.my_location,
-                              color: AppColors.primary,
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            location.name ?? 'Unknown Location',
-                            style: Theme.of(context).textTheme.bodyLarge
-                                ?.copyWith(fontWeight: FontWeight.w500),
-                          ),
-                          subtitle: Text(
-                            location.address ??
-                                '${location.latitude}, ${location.longitude}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          onTap: () {
-                            widget.onLocationSelected(location);
-                            Navigator.pop(context);
-                          },
+                  ),
+                  child: const Icon(
+                    Icons.my_location,
+                    color: AppColors.success,
+                    size: 20,
+                  ),
+                ),
+                title: const Text('ตำแหน่งปัจจุบันของฉัน'),
+                subtitle: Text(
+                  widget.currentLocation!.address ?? 'ตำแหน่งปัจจุบัน',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () {
+                  widget.onLocationSelected(widget.currentLocation!);
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+            const SizedBox(height: AppConstants.spacing16),
+          ],
+
+          // Nearby places (for destination only)
+          if (widget.isDestination && _nearbyPlaces.isNotEmpty) ...[
+            Text(
+              'สถานที่ใกล้เคียง',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: AppConstants.spacing8),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _nearbyPlaces.length > 10 ? 10 : _nearbyPlaces.length,
+              itemBuilder: (context, index) {
+                final place = _nearbyPlaces[index];
+                return Card(
+                  child: ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusMedium,
                         ),
-                      );
+                      ),
+                      child: const Icon(
+                        Icons.location_on,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      place.name ?? 'Unknown Place',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      place.address ?? '',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () {
+                      widget.onLocationSelected(place);
+                      Navigator.pop(context);
                     },
                   ),
+                );
+              },
+            ),
+            const SizedBox(height: AppConstants.spacing16),
+          ],
+
+          // Loading nearby places
+          if (widget.isDestination && _isLoadingNearby) ...[
+            const Center(
+              child: Column(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: AppConstants.spacing8),
+                  Text('กำลังค้นหาสถานที่ใกล้เคียง...'),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppConstants.spacing16),
+          ],
+
+          // Popular locations
+          Text(
+            'สถานที่ยอดนิยม',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: AppConstants.spacing8),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _popularLocations.length,
+            itemBuilder: (context, index) {
+              final location = _popularLocations[index];
+              return Card(
+                child: ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusMedium,
+                      ),
+                    ),
+                    child: Icon(
+                      widget.isDestination
+                          ? Icons.location_on
+                          : Icons.my_location,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    location.name ?? 'Unknown Location',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  subtitle: Text(
+                    location.address ??
+                        '${location.latitude}, ${location.longitude}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () {
+                    widget.onLocationSelected(location);
+                    Navigator.pop(context);
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -230,6 +466,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }

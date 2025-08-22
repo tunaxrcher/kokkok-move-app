@@ -52,11 +52,14 @@ dependencies:
   # Networking
   dio: ^5.7.0
   retrofit: ^4.4.1
+  http: ^1.2.2
 
   # Maps & Location
   google_maps_flutter: ^2.9.0
   geolocator: ^13.0.2
   geocoding: ^3.0.0
+  google_places_flutter: ^2.0.9
+  google_polyline_algorithm: ^3.1.0
 
   # Storage & Preferences
   shared_preferences: ^2.3.3

@@ -7,6 +7,7 @@ import '../../shared/services/auth_service.dart';
 import '../../shared/services/location_service.dart';
 import '../../shared/services/ride_service.dart';
 import '../../shared/services/storage_service.dart';
+import '../../shared/services/google_places_service.dart';
 import '../network/api_client.dart';
 import '../constants/app_constants.dart';
 
@@ -40,6 +41,7 @@ Future<void> initializeDependencies() async {
     ),
   );
 
+  sl.registerSingleton<GooglePlacesService>(GooglePlacesService());
   sl.registerSingleton<LocationService>(LocationService());
 
   sl.registerSingleton<RideService>(

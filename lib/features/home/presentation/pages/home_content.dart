@@ -184,6 +184,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
       backgroundColor: Colors.transparent,
       builder: (context) => LocationSearchSheet(
         isDestination: isDestination,
+        currentLocation: _currentLocation,
         onLocationSelected: (location) {
           setState(() {
             if (isDestination) {

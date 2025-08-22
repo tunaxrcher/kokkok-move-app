@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/router/app_router.dart';
 import 'home_content.dart';
-import '../../../profile/presentation/widgets/my_pages_drawer.dart';
 
 class MainPage extends StatefulWidget {
   final Widget child;
